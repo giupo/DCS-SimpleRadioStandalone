@@ -52,6 +52,17 @@ LuaExportActivityNextEvent = function(tCurrent)
 
         local _status,_result = pcall(function()
 
+            -- SO the update JSON IS more than the maximum MTU of 1500 and the max guaranteed size of 576 for a UDP packet
+            -- BUT Windows Loopback has a special MTU:
+            --               MTU  MediaSenseState   Bytes In  Bytes Out  Interface
+            -- ----  ---------------  ---------  ---------  -------------
+            --   1500                5          0          0  WiFi
+            --   1500                5          0          0  Local Area Connection* 3
+            -- 4294967295                1          0      98987  Loopback Pseudo-Interface 1
+            --   1500                1    5513969    2586318  Ethernet
+            --   1500                5          0          0  Ethernet 2
+            -- So in theory we're good... but we'll see
+
             local _update  =
             {
                 name = "",
@@ -59,11 +70,20 @@ LuaExportActivityNextEvent = function(tCurrent)
                 selected = -1,
                 unitId = -1,
                 ptt = false,
+                intercom = false,
+                pos = {x=0,y=0,z=0},
                 radios =
                 {
-                    { id = 1, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 200*1000000, freqMax = 400*1000000,enc = 0}, -- enc means encrypted
-                    { id = 2, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 100*1000000, freqMax = 200*1000000 ,enc = 0},
-                    { id = 3, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 }
+                    { id = 0, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 200*1000000, freqMax = 400*1000000,enc = 0}, -- enc means encrypted
+                    { id = 1, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 100*1000000, freqMax = 200*1000000 ,enc = 0},
+                    { id = 2, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 },
+            --        { id = 3, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 },
+           --         { id = 4, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 },
+            --        { id = 5, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 },
+           --         { id = 6, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 },
+             --       { id = 7, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 },
+               --     { id = 8, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 },
+              --      { id = 9, name = "init", frequency = 0, modulation = 0, volume = 1.0, secondaryFrequency = 1, freqMin = 1*1000000, freqMax = 76*1000000,enc = 0 },
                 },
                 radioType = 3,
             }
@@ -76,9 +96,9 @@ LuaExportActivityNextEvent = function(tCurrent)
                 _update.name =  _data.UnitName
                 _update.unit = _data.Name
                 _update.unitId = LoGetPlayerPlaneId()
-                --            _update.pos.x = _data.Position.x
-                --            _update.pos.y = _data.Position.z
 
+                _update.pos = _data.Position
+               
                 if _update.unit == "UH-1H" then
                     _update = SR.exportRadioUH1H(_update)
                 elseif string.find(_update.unit, "SA342") then
@@ -188,10 +208,16 @@ LuaExportActivityNextEvent = function(tCurrent)
         _send = true
     end
 
+    -- call
+    _status,_result = pcall(function()
+       	-- Call original function if it exists
+		if _prevExport.LuaExportActivityNextEvent then
+			_prevExport.LuaExportActivityNextEvent(tCurrent)
+		end
+    end)
 
-    -- Call original function if it exists
-    if _prevExport.LuaExportActivityNextEvent then
-        _prevExport.LuaExportActivityNextEvent(tCurrent)
+    if not _status then
+        SR.log('ERROR Calling other LuaExportActivityNextEvent from another script: ' .. _result)
     end
 
     return tNext
