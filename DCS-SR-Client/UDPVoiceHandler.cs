@@ -131,6 +131,10 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client
                     {
                         _encodedAudio.Add(bytes);
                     }
+                    else if (bytes != null && bytes.Length == 15 && bytes[0] == 1 && bytes[14] == 15)
+                    {
+                        Logger.Info("Received Ping Back from Server");
+                    }
                 }
                 catch (Exception e)
                 {
@@ -270,6 +274,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client
                                 }
                             }
                         }
+                     
                     }
                     catch (Exception ex)
                     {
@@ -464,19 +469,21 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client
         {
             Task.Run(() =>
             {
-                byte[] message = {1, 2, 3, 4, 5};
+                byte[] message = {1, 2, 3, 4, 5,6,7,8,9,10,11,12,13,14,15 };
                 while (!_stop)
                 {
                     Logger.Info("Pinging Server");
                     try
                     {
-                        Send(message, message.Length);
+                        var ip = new IPEndPoint(_address, 5010);
+                        _listener.Send(message, message.Length, ip);
                     }
                     catch (Exception e)
                     {
+                        Logger.Error(e, "Exception Sending Audio Ping! " + e.Message);
                     }
 
-                    Thread.Sleep(60*1000);
+                    Thread.Sleep(25*1000);
                 }
             });
         }
