@@ -488,8 +488,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client
                     Logger.Info("Pinging Server");
                     try
                     {
-                    //    var ip = new IPEndPoint(_address, 5010);
-                     //   _listener.Send(message, message.Length, ip);
+                        var ip = new IPEndPoint(_address, 5010);
+                        _listener.Send(message, message.Length, ip);
                     }
                     catch (Exception e)
                     {
