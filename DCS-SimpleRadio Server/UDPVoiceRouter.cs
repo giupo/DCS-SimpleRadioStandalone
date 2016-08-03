@@ -46,13 +46,12 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server
                     {
                         Task.Run(() =>
                         {
-                            //last 36 bytes are guid!
-                            var guid = Encoding.ASCII.GetString(
-                                rawBytes, rawBytes.Length - 22, 22);
-
-                            if (_clientsList.ContainsKey(guid))
+                            var udpVoicePacket = UDPVoicePacket.DeserialisePacket(rawBytes);
+                      
+            
+                            if (udpVoicePacket!=null&& _clientsList.ContainsKey(udpVoicePacket.ClientGUID))
                             {
-                                var client = _clientsList[guid];
+                                var client = _clientsList[udpVoicePacket.ClientGUID];
                                 client.voipPort = groupEP;
 
                                 var spectatorAudio = _serverSettings.ServerSetting[(int)ServerSettingType.SPECTATORS_AUDIO_DISABLED];
@@ -66,10 +65,10 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server
                                     SendToOthers(rawBytes,client );
                                 }
                             }
-                            else
+                            else if(udpVoicePacket != null)
                             {
                                 SRClient value;
-                                _clientsList.TryRemove(guid, out value);
+                                _clientsList.TryRemove(udpVoicePacket.ClientGUID, out value);
                                 //  logger.Info("Removing  "+guid+" From UDP pool");
                             }
                         });
@@ -142,7 +141,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server
 
                         if (ip != null)
                         {
-                             //    _listener.Send(bytes, bytes.Length, ip);
+                                 _listener.Send(bytes, bytes.Length, ip);
                         }
                     }
                 }
