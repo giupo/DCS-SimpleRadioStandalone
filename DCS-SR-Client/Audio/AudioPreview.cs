@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Windows;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.DSP;
 using FragLabs.Audio.Codecs;
-using NAudio.CoreAudioApi;
+using FragLabs.Audio.Codecs.Opus;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using NLog;
@@ -15,11 +14,11 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private BufferedWaveProvider _playBuffer;
         private WaveIn _waveIn;
-        private WasapiOut _waveOut;
+        private WaveOut _waveOut;
 
         private VolumeSampleProviderWithPeak _volumeSampleProvider;
         private BufferedWaveProvider _buffBufferedWaveProvider;
-      
+
         public float MicBoost { get; set; } = 1.0f;
 
         private float _speakerBoost = 1.0f;
@@ -44,11 +43,15 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio
         public short MicMax { get; set; }
         public float SpeakerMax { get; set; }
 
-        public void StartPreview(int mic, MMDevice speakers)
+        public void StartPreview(int mic, int speakers)
         {
             try
             {
-                _waveOut = new WasapiOut(speakers,AudioClientShareMode.Shared, true, 100);
+                _waveOut = new WaveOut
+                {
+                    DesiredLatency = 160, // half to get tick rate - so 40ms
+                    DeviceNumber = speakers
+                };
 
                 _buffBufferedWaveProvider = new BufferedWaveProvider(new WaveFormat(AudioManager.INPUT_SAMPLE_RATE, 16, 1));
                 _buffBufferedWaveProvider.ReadFully = true;
@@ -59,24 +62,16 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio
                 _volumeSampleProvider = new VolumeSampleProviderWithPeak(filter, (peak => SpeakerMax = peak));
                 _volumeSampleProvider.Volume = SpeakerBoost;
 
-                _waveOut.Init(_volumeSampleProvider);
+                //resample client audio to 44100
+                var resampler = new WdlResamplingSampleProvider(_volumeSampleProvider, AudioManager.OUTPUT_SAMPLE_RATE);
+                //resample and output at 44100
+
+                _waveOut.Init(resampler);
 
                 _waveOut.Play();
-            }
-            catch (Exception ex)
-            {
-                Logger.Error(ex, "Error starting audio Output - Quitting! " + ex.Message);
 
-                MessageBox.Show($"Problem Initialising Audio Output! Try a different Output device and please post your client log on the forums", "Audio Output Error", MessageBoxButton.OK,
-                            MessageBoxImage.Error);
-
-                Environment.Exit(1);
-            }
-
-            try
-            {
                 //opus
-                _encoder = OpusEncoder.Create(AudioManager.INPUT_SAMPLE_RATE, 1, FragLabs.Audio.Codecs.Opus.Application.Voip);
+                _encoder = OpusEncoder.Create(AudioManager.INPUT_SAMPLE_RATE, 1, Application.Voip);
                 _encoder.ForwardErrorCorrection = false;
                 _decoder = OpusDecoder.Create(AudioManager.INPUT_SAMPLE_RATE, 1);
                 _decoder.ForwardErrorCorrection = false;
@@ -92,13 +87,11 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio
                 _waveIn.WaveFormat = new WaveFormat(AudioManager.INPUT_SAMPLE_RATE, 16, 1);
 
                 _waveIn.StartRecording();
+
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error starting audio Input - Quitting! " + ex.Message);
-
-                MessageBox.Show($"Problem Initialising Audio Input! Try a different Input device and please post your client log on the forums", "Audio Input Error", MessageBoxButton.OK,
-                            MessageBoxImage.Error);
+                Logger.Error(ex, "Error starting audio Quitting! " + ex.Message);
 
                 Environment.Exit(1);
             }
@@ -174,7 +167,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio
                         //now decode
                         var decodedBytes = _decoder.Decode(encoded, len, out decodedLength);
 
-                        _buffBufferedWaveProvider.AddSamples(decodedBytes,0,decodedLength);
+                        _buffBufferedWaveProvider.AddSamples(decodedBytes, 0, decodedLength);
 
 
                     }
