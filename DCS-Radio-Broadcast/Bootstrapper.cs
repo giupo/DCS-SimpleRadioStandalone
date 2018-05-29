@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using Caliburn.Micro;
 using Ciribob.DCS.SimpleRadio.Standalone.Broadcaster.UI.MainWindow;
+using Ciribob.DCS.SimpleRadio.Standalone.Common;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
@@ -35,7 +36,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Broadcaster
             var fileTarget = new FileTarget();
             config.AddTarget("file", fileTarget);
 
-            fileTarget.FileName = "${basedir}/serverlog.txt";
+            fileTarget.FileName = "${basedir}/broadcaster-log.txt";
             fileTarget.Layout =
                 @"${longdate} | ${logger} | ${message} ${exception:format=toString,Data:maxInnerExceptionLevel=1}";
 
@@ -86,7 +87,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Broadcaster
 
             DisplayRootViewFor<MainViewModel>(settings);
 
-           // UpdaterChecker.CheckForUpdate();
+            UpdaterChecker.CheckForUpdate();
         }
 
         protected override void BuildUp(object instance)

@@ -38,6 +38,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NAudio", "NAudio\NAudio.csproj", "{DA4F02E3-0B5E-42CD-B8D9-5583FA51D66E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DCS-Radio-Broadcast", "DCS-Radio-Broadcast\DCS-Radio-Broadcast.csproj", "{C2079555-AE17-4111-ADD0-73FC977C8D77}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CF8DA5C1-0105-4486-9E28-CB2321D8F122} = {CF8DA5C1-0105-4486-9E28-CB2321D8F122}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
