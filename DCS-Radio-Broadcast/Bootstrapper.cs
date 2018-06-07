@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Media.Imaging;
 using Caliburn.Micro;
 using Ciribob.DCS.SimpleRadio.Standalone.Broadcaster.UI.MainWindow;
+using Ciribob.DCS.SimpleRadio.Standalone.Broadcaster.UI.MainWindow.FrequencyBlock;
 using Ciribob.DCS.SimpleRadio.Standalone.Common;
 using NLog;
 using NLog.Config;
@@ -54,9 +55,13 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Broadcaster
         {
             _simpleContainer.Singleton<IWindowManager, WindowManager>();
             _simpleContainer.Singleton<IEventAggregator, EventAggregator>();
-         
+
+            _simpleContainer.Singleton<AudioDeviceService>();
+
 
             _simpleContainer.Singleton<MainViewModel>();
+
+            _simpleContainer.PerRequest<FrequencyBlockViewModel>();
 
         }
 
@@ -87,7 +92,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Broadcaster
 
             DisplayRootViewFor<MainViewModel>(settings);
 
-            UpdaterChecker.CheckForUpdate();
+        //    UpdaterChecker.CheckForUpdate();
         }
 
         protected override void BuildUp(object instance)

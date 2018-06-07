@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Caliburn.Micro;
+using Ciribob.DCS.SimpleRadio.Standalone.Broadcaster.UI.MainWindow.FrequencyBlock;
 using Ciribob.DCS.SimpleRadio.Standalone.Common;
 using NAudio.Wave;
 using NLog;
@@ -12,14 +13,25 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Broadcaster.UI.MainWindow
     public sealed class MainViewModel : Screen
     {
         private readonly IEventAggregator _eventAggregator;
+        private readonly AudioDeviceService _service;
         private readonly IWindowManager _windowManager;
         private readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        public MainViewModel(IWindowManager windowManager, IEventAggregator eventAggregator)
+        public FrequencyBlockViewModel Frequency1 { get; }
+        public FrequencyBlockViewModel Frequency2 { get; }
+        public FrequencyBlockViewModel Frequency3 { get; }
+
+
+        public MainViewModel(IWindowManager windowManager, IEventAggregator eventAggregator, AudioDeviceService service, FrequencyBlockViewModel frequency1, FrequencyBlockViewModel frequency2, FrequencyBlockViewModel frequency3)
         {
+            Frequency1 = frequency1;
+            Frequency2 = frequency2;
+            Frequency3 = frequency3;
+
             _windowManager = windowManager;
            _eventAggregator = eventAggregator;
-        
+            _service = service;
+
             _eventAggregator.Subscribe(this);
 
             DisplayName = "DCS-SRS Broadcaster - " + UpdaterChecker.VERSION;
@@ -56,36 +68,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Broadcaster.UI.MainWindow
 //            Logger.Info("Audio Input - Saved ID " +
 //                        _settings.GetClientSetting(SettingsKeys.AudioInputDeviceId).StringValue);
 
-            for (var i = 0; i < WaveIn.DeviceCount; i++)
-            {
-                var item = WaveIn.GetCapabilities(i);
-
-                _inputSelectorList.Add(new AudioDeviceModel()
-                {
-                    AudioDevice = item,
-                    DeviceIndex = i
-                });
-            
-                Logger.Info("Audio Input - " + item.ProductName + " " + item.ProductGuid.ToString() + " - Name GUID" +
-                            item.NameGuid + " - CHN:" + item.Channels);
-
-//                if (item.ProductName.Trim().StartsWith(_settings.GetClientSetting(SettingsKeys.AudioInputDeviceId).StringValue.Trim()))
-//                {
-//                    Mic.SelectedIndex = i;
-//                    Logger.Info("Audio Input - Found Saved ");
-//                }
-            }
-
-            // No microphone is available - users can still connect/listen, but audio input controls are disabled and sending is prevented
-            if (WaveIn.DeviceCount == 0 )
-            {
-                Logger.Info("Audio Input - No audio input devices available, disabling mic preview");
-            }
-            else
-            {
-                Logger.Info("Audio Input - " + WaveIn.DeviceCount + " audio input devices available, configuring as usual");
-             
-            }
+            _inputSelectorList = new ObservableCollection<AudioDeviceModel>(_service.AudioInputs);
 
             if (_inputSelectorList.Count > 0)
             {

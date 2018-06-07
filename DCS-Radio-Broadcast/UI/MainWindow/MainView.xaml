@@ -5,26 +5,32 @@
              xmlns:local="clr-namespace:Ciribob.DCS.SimpleRadio.Standalone.Broadcaster.UI"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
-             Width="330"
-             Height="300"
+             xmlns:cal="http://www.caliburnproject.org"
+             Width="200"
+             Height="330"
              mc:Ignorable="d">
               <StackPanel>
-                <ComboBox  x:Name="InputSelector" SelectedItem="{Binding SelectedInput}">
+                <ComboBox  x:Name="InputSelector" SelectedItem="{Binding SelectedInput}" Margin="10">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Name}" Margin="5" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                  <ComboBox  x:Name="SideSelector" SelectedItem="{Binding SelectedSide}">
+        <ComboBox  x:Name="SideSelector" SelectedItem="{Binding SelectedSide}"  Margin="10">
                       <ComboBox.ItemTemplate>
                           <DataTemplate>
                               <TextBlock Text="{Binding Name}" Margin="5" />
                           </DataTemplate>
                       </ComboBox.ItemTemplate>
                   </ComboBox>
-        <TextBox  x:Name="Port"   />
-        <Button x:Name="ConnectDisconnect" Content="Connect/Disconnect" />
+        <TextBox  x:Name="Port"  Margin="10"  />
+
+        <ContentControl x:Name="Frequency1"   ></ContentControl>
+                  <ContentControl x:Name="Frequency2"   ></ContentControl>
+                  <ContentControl x:Name="Frequency3"   ></ContentControl>
+
+        <Button x:Name="ConnectDisconnect" Content="Connect/Disconnect"  Margin="10" />
     </StackPanel>
 
 </UserControl>
