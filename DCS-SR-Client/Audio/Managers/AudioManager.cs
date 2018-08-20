@@ -34,6 +34,9 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
         public static readonly int SEGMENT_FRAMES = (INPUT_SAMPLE_RATE / 1000) * INPUT_AUDIO_LENGTH_MS
             ; //640 is 40ms as INPUT_SAMPLE_RATE / 1000 *40 = 640
 
+        public static readonly string DEFAULT_WINDOWS_AUDIO_INPUT_DEVICE = "DEFAULT_WINDOWS_AUDIO_INPUT_DEVICE";
+        public static readonly string DEFAULT_WINDOWS_AUDIO_OUTPUT_DEVICE = "DEFAULT_WINDOWS_AUDIO_OUTPUT_DEVICE";
+
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         public delegate void VOIPConnectCallback(bool result, bool connectionError, string connection);
@@ -223,6 +226,10 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
                 }
             }
 
+            _tcpVoiceHandler = new TCPVoiceHandler(_clientsList, guid, ipAddress, port, _decoder, this, inputManager, voipConnectCallback);
+            var voiceSenderThread = new Thread(_tcpVoiceHandler.Listen);
+
+            voiceSenderThread.Start();
 
             if (mic != -1)
             {
@@ -238,12 +245,6 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
                     _waveIn.DataAvailable += _waveIn_DataAvailable;
                     _waveIn.WaveFormat = new WaveFormat(INPUT_SAMPLE_RATE, 16, 1);
 
-                    _tcpVoiceHandler =
-                        new TCPVoiceHandler(_clientsList, guid, ipAddress, port, _decoder, this, inputManager, voipConnectCallback);
-                    var voiceSenderThread = new Thread(_tcpVoiceHandler.Listen);
-
-                    voiceSenderThread.Start();
-
                     _waveIn.StartRecording();
 
 
@@ -257,6 +258,10 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
 
                     Environment.Exit(1);
                 }
+            }
+            else
+            {
+                Logger.Warn("No microphone selected, no audio will be transmitted!");
             }
         }
         

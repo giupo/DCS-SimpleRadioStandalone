@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Windows;
+using Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers;
 using Ciribob.DCS.SimpleRadio.Standalone.Client.Input;
 using Ciribob.DCS.SimpleRadio.Standalone.Common;
 using NLog;
@@ -299,8 +300,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Settings
 
             {SettingsKeys.AutoSelectPresetChannel.ToString(), "true"},
 
-            {SettingsKeys.AudioInputDeviceId.ToString(), ""},
-            {SettingsKeys.AudioOutputDeviceId.ToString(), ""},
+            {SettingsKeys.AudioInputDeviceId.ToString(), AudioManager.DEFAULT_WINDOWS_AUDIO_INPUT_DEVICE},
+            {SettingsKeys.AudioOutputDeviceId.ToString(), AudioManager.DEFAULT_WINDOWS_AUDIO_OUTPUT_DEVICE},
             {SettingsKeys.MicAudioOutputDeviceId.ToString(), ""},
 
             {SettingsKeys.LastServer.ToString(), "127.0.0.1"},

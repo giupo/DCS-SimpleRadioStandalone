@@ -455,6 +455,23 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
             Logger.Info("Audio Input - Saved ID " +
                         _settings.GetClientSetting(SettingsKeys.AudioInputDeviceId).StringValue);
 
+            var enumerator = new MMDeviceEnumerator();
+            MMDevice defaultAudioInput = null;
+            try
+            {
+                defaultAudioInput = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
+
+                Logger.Debug("Default Windows audio input device - " + defaultAudioInput.DeviceFriendlyName + " " + defaultAudioInput.ID + " CHN:" +
+                            defaultAudioInput.AudioClient.MixFormat.Channels + " Rate:" +
+                            defaultAudioInput.AudioClient.MixFormat.SampleRate.ToString());
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn(ex, "Failed to get default Windows audio input device, ignoring");
+            }
+
+            AudioDeviceListItem defaultListItem = null;
+            string selectedAudioInputDeviceId = _settings.GetClientSetting(SettingsKeys.AudioInputDeviceId).StringValue.Trim();
             for (var i = 0; i < WaveIn.DeviceCount; i++)
             {
                 //first time round
@@ -467,16 +484,49 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
                 Mic.Items.Add(new AudioDeviceListItem()
                 {
                     Text = item.ProductName,
-                    Value = item
+                    Value = item,
+                    DeviceNumber = i,
+                    IsWindowsDefault = false
                 });
+
+                if (defaultAudioInput != null && defaultAudioInput.FriendlyName.StartsWith(item.ProductName))
+                {
+                    defaultListItem = new AudioDeviceListItem()
+                    {
+                        Text = "DEFAULT WINDOWS AUDIO INPUT",
+                        Value = item,
+                        DeviceNumber = i,
+                        IsWindowsDefault = true
+                    };
+
+                    Logger.Debug($"Default Windows audio input devoice has DeviceNumber {i}");
+                }
 
                 Logger.Info("Audio Input - " + item.ProductName + " " + item.ProductGuid.ToString() + " - Name GUID" +
                             item.NameGuid + " - CHN:" + item.Channels);
 
-                if (item.ProductName.Trim().StartsWith(_settings.GetClientSetting(SettingsKeys.AudioInputDeviceId).StringValue.Trim()))
+                if (item.ProductName.Trim().StartsWith(selectedAudioInputDeviceId))
                 {
                     Mic.SelectedIndex = i;
-                    Logger.Info("Audio Input - Found Saved ");
+                    Logger.Info($"Audio Input - found saved audio input device {selectedAudioInputDeviceId} with DeviceNumber {i}");
+                }
+            }
+
+            if (defaultListItem != null)
+            {
+                Mic.Items.Insert(0, defaultListItem);
+
+                if (selectedAudioInputDeviceId == AudioManager.DEFAULT_WINDOWS_AUDIO_INPUT_DEVICE)
+                {
+                    Logger.Info("Using default Windows audio input device");
+
+                    Mic.SelectedIndex = 0;
+                }
+                else
+                {
+                    Logger.Info("Using audio input device selected by user");
+
+                    Mic.SelectedIndex += 1;
                 }
             }
 
@@ -711,10 +761,14 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
         {
             if (_clientStateSingleton.IsConnected)
             {
+                Logger.Debug("Client connected, disconnecting");
+
                 Stop();
             }
             else
             {
+                Logger.Debug("Client disconnected, connecting");
+
                 SaveSelectedInputAndOutput();
 
                 try
@@ -849,7 +903,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
             // Only save selected microphone if one is actually available, resulting in a crash otherwise
             if (_clientStateSingleton.MicrophoneAvailable)
             {
-                _settings.SetClientSetting(SettingsKeys.AudioInputDeviceId, ((WaveInCapabilities)((AudioDeviceListItem)Mic.SelectedItem).Value).ProductName);
+                AudioDeviceListItem selectedMic = (AudioDeviceListItem)Mic.SelectedItem;
+                _settings.SetClientSetting(SettingsKeys.AudioInputDeviceId, selectedMic.IsWindowsDefault ? AudioManager.DEFAULT_WINDOWS_AUDIO_INPUT_DEVICE : ((WaveInCapabilities)selectedMic.Value).ProductName);
             }
 
             _settings.SetClientSetting(SettingsKeys.AudioOutputDeviceId, output.ID);
@@ -870,6 +925,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
 
         private void ConnectCallback(bool result, bool connectionError, string connection)
         {
+            Logger.Info($"Received server connection callback for server @ {connection}, {(result ? "successfully connected" : (connectionError ? "failed to connect" : "disconnected"))}");
+
             string currentConnection = ServerIp.Text.Trim();
             if (!currentConnection.Contains(":"))
             {
@@ -882,8 +939,13 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
                 {
                     try
                     {
+                        int selectedMic = Mic.SelectedIndex;
+                        AudioDeviceListItem micItem = null;
+                        if (selectedMic >= 0 && selectedMic < Mic.Items.Count)
+                        {
+                            micItem = (AudioDeviceListItem)Mic.Items[selectedMic];
+                        }
 
-                        var inputId = Mic.SelectedIndex;
                         var output = outputDeviceList[Speakers.SelectedIndex];
 
                         //check if we have optional output
@@ -902,7 +964,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
 
                         _settings.SetClientSetting(SettingsKeys.LastServer, ServerIp.Text);
 
-                        _audioManager.StartEncoding(inputId, output, _guid, InputManager,
+                        _audioManager.StartEncoding(micItem == null ? -1 : micItem.DeviceNumber, output, _guid, InputManager,
                             _resolvedIp, _port, micOutput, VOIPConnectCallback);
                     }
                     catch (Exception ex)
@@ -933,6 +995,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
 
         private void VOIPConnectCallback(bool result, bool connectionError, string connection)
         {
+            Logger.Info($"Received VOIP connection callback for server @ {connection}, {(result ? "successfully connected" : (connectionError ? "failed to connect" : "disconnected"))}");
+
             if (result)
             {
                 VOIPConnectionStatus.Source = Images.IconConnected;
@@ -1002,14 +1066,19 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.UI
                 try
                 {
                     var inputId = Mic.SelectedIndex;
+                    if (inputId < 0 || inputId >= Mic.Items.Count)
+                    {
+                        Logger.Info("Unable to preview audio, no valid audio input device selected");
+                        return;
+                    }
+
                     var output = outputDeviceList[Speakers.SelectedIndex];
 
                     SaveSelectedInputAndOutput();
 
-
                     _audioPreview = new AudioPreview();
                     _audioPreview.SpeakerBoost = VolumeConversionHelper.ConvertVolumeSliderToScale((float)SpeakerBoost.Value); 
-                    _audioPreview.StartPreview(inputId, output);
+                    _audioPreview.StartPreview(((AudioDeviceListItem)Mic.Items[inputId]).DeviceNumber, output);
                   
                     Preview.Content = "Stop Preview";
                 }
